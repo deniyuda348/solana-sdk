@@ -1,211 +1,254 @@
 # Solana Wallet Manager
 
-A comprehensive command-line interface (CLI) tool for managing Solana wallet operations including transfers, token swaps, SOL wrapping, and portfolio tracking.
+A comprehensive Solana wallet management tool for transfers, swaps, portfolio tracking, and **SOL distribution/collection**.
 
 ## Features
 
-🔐 **Wallet Management**
-- Generate new wallets
-- Import existing wallets from private key or file
-- Secure wallet storage and loading
-
-💸 **SOL Transfers**
-- Send SOL to other wallets
-- Add memos to transfers
-- Batch transfers to multiple recipients
-- Fee estimation
-
-🔄 **SOL Wrapping/Unwrapping**
-- Wrap SOL to WSOL (Wrapped SOL)
-- Unwrap WSOL back to SOL
-- Automatic token account creation
-
-🔁 **Token Swaps via Jupiter**
-- Swap between any supported SPL tokens
-- Integration with Jupiter aggregator for best prices
-- Support for slippage configuration
-- Real-time price data
-
-📊 **Portfolio Management**
-- View complete portfolio overview
-- Check individual token balances
-- Real-time portfolio valuation
-- Track largest holdings
+- 🔐 **Secure Wallet Management** - Wallets stored with encoded private keys
+- 💰 **Portfolio Tracking** - View token balances and portfolio value
+- 🔄 **Token Swapping** - Integrated Jupiter DEX for token swaps
+- 📤 **SOL Transfers** - Send SOL with memo support
+- 🌊 **Wrap/Unwrap SOL** - Convert between SOL and WSOL
+- 📊 **Distribution System** - Distribute SOL to multiple wallets
+- 🔄 **Collection System** - Collect SOL back from distributed wallets
+- 🎯 **Interactive CLI** - User-friendly command-line interface
 
 ## Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd solana-sdk
-   ```
+1. Clone the repository
+2. Install dependencies:
+```bash
+npm install
+```
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+3. Build the project:
+```bash
+npm run build
+```
 
-3. **Build the project:**
-   ```bash
-   npm run build
-   ```
+## Wallet Structure
 
-4. **Configure environment (optional):**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your preferred settings
-   ```
+The application now uses a structured wallet system in the `./wallet` folder:
 
-## Usage
+```
+wallet/
+├── main.json              # Main wallet (encoded private key)
+└── distributed/           # Sub-wallets for distribution
+    ├── wallet-0.json      # First distributed wallet
+    ├── wallet-1.json      # Second distributed wallet
+    └── ...                # More wallets as needed
+```
 
-### Interactive Mode (Recommended)
+All wallet files contain **encoded private keys** for security, not plain JSON arrays.
 
-Start the interactive CLI:
+## Quick Start
+
+### 1. Interactive Mode
 ```bash
 npm run dev
 # or
 npm start
 ```
 
-### Command Line Mode
-
-You can also use specific commands directly:
+### 2. Create a Wallet
 ```bash
-npm run dev start
+npm run dev create-wallet
 ```
 
-## Configuration
+### 3. Distribution & Collection
 
-The tool uses the following default configuration:
-
-- **Network**: Mainnet-beta
-- **RPC URL**: `https://api.mainnet-beta.solana.com`
-- **Slippage**: 3% (300 basis points)
-- **Priority Fee**: 1000 lamports
-
-To customize these settings, copy `.env.example` to `.env` and modify the values.
-
-## Features Overview
-
-### 1. Wallet Setup
-- **Generate New Wallet**: Create a fresh Solana keypair
-- **Load from Private Key**: Import wallet using private key array
-- **Load from File**: Import wallet from saved JSON file
-
-### 2. Portfolio Management
-View comprehensive portfolio information including:
-- SOL balance
-- All SPL token balances
-- Real-time USD values
-- Total portfolio value
-
-### 3. SOL Transfers
-Send SOL to other addresses with features:
-- Address validation
-- Balance checking
-- Optional memo support
-- Transaction confirmation
-
-### 4. SOL Wrapping
-Convert between SOL and WSOL:
-- **Wrap**: Convert SOL to WSOL for DeFi use
-- **Unwrap**: Convert WSOL back to SOL
-- Automatic associated token account management
-
-### 5. Token Swaps
-Swap between tokens using Jupiter:
-- Support for major SPL tokens (USDC, USDT, RAY, SRM, etc.)
-- Best price routing through Jupiter aggregator
-- Configurable slippage protection
-- Real-time price information
-
-## Supported Tokens
-
-The tool includes built-in support for major Solana tokens:
-- **SOL/WSOL**: Native Solana token
-- **USDC**: USD Coin
-- **USDT**: Tether USD
-- **RAY**: Raydium token
-- **SRM**: Serum token
-
-Additional tokens can be used by providing their mint address.
-
-## Security Considerations
-
-⚠️ **Important Security Notes:**
-
-1. **Private Keys**: Never share your private keys or wallet files
-2. **Mainnet vs Devnet**: Be aware of which network you're using
-3. **Transaction Fees**: All transactions require SOL for gas fees
-4. **Slippage**: High slippage can result in unfavorable trades
-5. **Wallet Storage**: Store wallet files securely and make backups
-
-## Development
-
-### Project Structure
-
+#### Distribute SOL to Multiple Wallets
+```bash
+npm run distribute
 ```
-src/
-├── config/           # Configuration settings
-├── services/         # Core business logic
-│   ├── jupiter.ts    # Jupiter swap integration
-│   ├── portfolio.ts  # Portfolio management
-│   ├── transfer.ts   # SOL transfers
-│   └── wrapping.ts   # SOL wrapping/unwrapping
-├── types/           # TypeScript type definitions
-├── utils/           # Utility functions
-│   ├── logger.ts    # Colored console logging
-│   └── wallet.ts    # Wallet management utilities
-└── index.ts         # Main CLI interface
+This command will:
+- Check your main wallet balance
+- Create sub-wallets if needed
+- Distribute specified SOL amount to each wallet
+- Show detailed transaction results
+
+#### Collect SOL Back to Main Wallet
+```bash
+npm run collect
+```
+This command will:
+- Check all distributed wallet balances
+- Collect SOL back to main wallet
+- Allow you to keep a specified amount in each wallet
+- Show total collected amount
+
+### 4. Check Distribution Status
+```bash
+npm run distribute status
+npm run collect status
 ```
 
-### Available Scripts
+## Environment Configuration
 
-- `npm run build`: Compile TypeScript to JavaScript
-- `npm run dev`: Run in development mode with ts-node
-- `npm start`: Run compiled JavaScript
-- `npm run type-check`: Check TypeScript types without compilation
+Create a `.env` file for custom configuration:
 
-### Adding New Features
+```env
+# Solana Network
+RPC_URL=https://api.mainnet-beta.solana.com
+SOLANA_NETWORK=mainnet-beta
 
-1. **Services**: Add new functionality in the `services/` directory
-2. **Types**: Define interfaces in `types/index.ts`
-3. **CLI**: Extend the main menu in `src/index.ts`
-4. **Configuration**: Add settings to `src/config/index.ts`
+# Auto-load wallet (optional)
+PRIVATE_KEY=your_encoded_private_key
+
+# Transaction Settings
+SLIPPAGE_BPS=300
+PRIORITY_FEE=1000
+```
+
+## Usage Examples
+
+### Distribution Workflow
+
+1. **Setup Main Wallet:**
+   ```bash
+   npm run dev
+   # Choose "Generate new wallet" → "Save as main wallet"
+   ```
+
+2. **Fund Main Wallet:**
+   - Send SOL to your main wallet address
+   - Verify balance in the application
+
+3. **Distribute SOL:**
+   ```bash
+   npm run distribute
+   # Follow prompts to distribute SOL to multiple wallets
+   ```
+
+4. **Check Status:**
+   ```bash
+   npm run distribute status
+   ```
+
+5. **Collect SOL Back:**
+   ```bash
+   npm run collect
+   # Collect SOL from all distributed wallets back to main
+   ```
+
+### Advanced Features
+
+#### Batch Operations
+- The distribution service automatically creates wallets as needed
+- Rate limiting prevents network issues during batch operations
+- Detailed error reporting for failed transactions
+
+#### Security Features
+- Private keys are encoded using AES-256-CBC encryption
+- Backward compatibility with plain JSON wallet files
+- Automatic wallet directory creation and management
+
+#### Error Handling
+- Insufficient balance detection
+- Failed transaction recovery
+- Detailed error reporting and logging
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm start` | Run the built application |
+| `npm run dev` | Run in development mode |
+| `npm run build` | Build TypeScript to JavaScript |
+| `npm run distribute` | Interactive SOL distribution |
+| `npm run collect` | Interactive SOL collection |
+| `npm test` | Run test suite |
+
+## API Reference
+
+### DistributionService
+
+```typescript
+import { DistributionService } from './src/services/distribution';
+
+const service = new DistributionService(rpcUrl);
+
+// Distribute SOL
+await service.distribute({
+  walletCount: 5,
+  amountPerWallet: 0.01,
+  memo: 'Distribution'
+});
+
+// Collect SOL
+await service.collect({
+  keepAmount: 0.001,
+  memo: 'Collection'
+});
+
+// Get status
+const status = await service.getDistributionStatus();
+```
+
+### WalletManager
+
+```typescript
+import { WalletManager } from './src/utils/wallet';
+
+const manager = new WalletManager(rpcUrl);
+
+// Save main wallet
+manager.saveMainWallet(keypair);
+
+// Load main wallet
+const mainWallet = manager.loadMainWallet();
+
+// Create distributed wallet
+const wallet = manager.createDistributedWallet(index);
+
+// Load all distributed wallets
+const wallets = manager.loadDistributedWallets();
+```
+
+## Security Notes
+
+- **Private Key Encoding**: All wallet files use AES-256-CBC encryption
+- **Local Storage**: Wallets are stored locally in the `./wallet` folder
+- **Network Security**: Use HTTPS RPC endpoints in production
+- **Backup**: Always backup your `./wallet` folder
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **RPC Connection Errors**
-   - Check your internet connection
-   - Verify the RPC URL in configuration
-   - Try switching to a different RPC endpoint
+1. **"Main wallet not found"**
+   - Run the main application and create a main wallet first
+   - Ensure `./wallet/main.json` exists
 
-2. **Insufficient Balance**
-   - Ensure you have enough SOL for transaction fees
-   - Check token balances before swapping
+2. **"Insufficient balance"**
+   - Check main wallet balance before distribution
+   - Account for transaction fees (≈5000 lamports per transaction)
 
-3. **Transaction Failures**
-   - Network congestion can cause timeouts
-   - Increase priority fee for faster confirmation
-   - Retry failed transactions
+3. **"No distributed wallets found"**
+   - Run distribution first to create sub-wallets
+   - Check `./wallet/distributed/` folder
 
-4. **Token Not Found**
-   - Verify token symbol or mint address
-   - Some tokens may not be available on Jupiter
+### Error Recovery
 
-### Getting Help
+- Failed transactions will be reported with specific error messages
+- Partially completed distributions can be resumed
+- Use status commands to check current wallet states
 
-If you encounter issues:
-1. Check the console output for detailed error messages
-2. Verify your wallet has sufficient balance
-3. Ensure you're connected to the correct network
-4. Check Solana network status for any ongoing issues
+## Development
 
-## Disclaimer
+```bash
+# Install dependencies
+npm install
 
-This tool is for educational and development purposes. Always verify transactions on a testnet before using on mainnet. The developers are not responsible for any financial losses incurred through the use of this software.
+# Run in development
+npm run dev
+
+# Build project
+npm run build
+
+# Type checking
+npm run type-check
+```
 
 ## License
 

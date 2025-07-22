@@ -8,7 +8,9 @@
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "test": "jest",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "distribute": "ts-node src/scripts/distribute.ts",
+    "collect": "ts-node src/scripts/collect.ts"
   },
   "keywords": [
     "solana",

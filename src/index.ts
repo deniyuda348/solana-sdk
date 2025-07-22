@@ -50,21 +50,28 @@ class SolanaWalletManager {
   }
 
   async setupWallet(): Promise<void> {
+    const choices = ['Generate new wallet', 'Load from private key', 'Load from file'];
+    
+    // Add option to load main wallet if it exists
+    if (this.walletManager.hasMainWallet()) {
+      choices.unshift('Load main wallet');
+    }
+    
+    choices.push('Exit');
+
     const answers = await inquirer.prompt([
       {
         type: 'list',
         name: 'action',
         message: 'How would you like to set up your wallet?',
-        choices: [
-          'Generate new wallet',
-          'Load from private key',
-          'Load from file',
-          'Exit'
-        ]
+        choices
       }
     ]);
 
     switch (answers.action) {
+      case 'Load main wallet':
+        await this.loadMainWallet();
+        break;
       case 'Generate new wallet':
         await this.generateNewWallet();
         break;
@@ -87,18 +94,33 @@ class SolanaWalletManager {
 
     const saveAnswer = await inquirer.prompt([
       {
-        type: 'confirm',
-        name: 'save',
-        message: 'Would you like to save this wallet to a file?',
-        default: true
+        type: 'list',
+        name: 'saveType',
+        message: 'How would you like to save this wallet?',
+        choices: [
+          'Save as main wallet (recommended)',
+          'Save as custom file',
+          'Don\'t save'
+        ],
+        default: 'Save as main wallet (recommended)'
       }
     ]);
 
-    if (saveAnswer.save) {
-      const filename = `wallet-${Date.now()}.json`;
-      const walletDir = this.walletManager.ensureWalletDirectory();
-      const filePath = path.join(walletDir, filename);
+    if (saveAnswer.saveType === 'Save as main wallet (recommended)') {
+      this.walletManager.saveMainWallet(keypair);
+      Logger.success('Wallet saved as main wallet in ./wallet/main.json');
+    } else if (saveAnswer.saveType === 'Save as custom file') {
+      const fileAnswer = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'filename',
+          message: 'Enter filename:',
+          default: `wallet-${Date.now()}.json`
+        }
+      ]);
       
+      const walletDir = this.walletManager.ensureWalletDirectory();
+      const filePath = path.join(walletDir, fileAnswer.filename);
       this.walletManager.saveWalletToFile(keypair, filePath);
     }
 
@@ -132,6 +154,18 @@ class SolanaWalletManager {
       this.initializeServices(keypair);
     } catch (error) {
       Logger.error(`Failed to load wallet: ${error}`);
+      await this.setupWallet();
+    }
+  }
+
+  private async loadMainWallet(): Promise<void> {
+    try {
+      const keypair = this.walletManager.loadMainWallet();
+      Logger.success('Main wallet loaded successfully!');
+      await this.walletManager.displayWalletInfo(keypair);
+      this.initializeServices(keypair);
+    } catch (error) {
+      Logger.error(`Failed to load main wallet: ${error}`);
       await this.setupWallet();
     }
   }
@@ -178,7 +212,7 @@ class SolanaWalletManager {
           'Wrap/Unwrap SOL',
           'Swap Tokens',
           'Check Balance',
-          'Change Wallet',
+          'Wallet Management',
           'Exit'
         ]
       }
@@ -200,10 +234,9 @@ class SolanaWalletManager {
       case 'Check Balance':
         await this.checkBalance();
         break;
-      case 'Change Wallet':
-        this.keypair = undefined;
-        await this.setupWallet();
-        return this.showMainMenu();
+      case 'Wallet Management':
+        await this.walletManagement();
+        break;
       case 'Exit':
         Logger.success('Thank you for using Solana Wallet Manager!');
         process.exit(0);
@@ -387,6 +420,60 @@ class SolanaWalletManager {
       }
     } catch (error) {
       Logger.error(`Balance check failed: ${error}`);
+    }
+  }
+
+  private async walletManagement(): Promise<void> {
+    const answers = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'action',
+        message: 'Wallet Management Options:',
+        choices: [
+          'Change Wallet',
+          'Show Distribution Status',
+          'Quick Distribute',
+          'Quick Collect',
+          'Back to Main Menu'
+        ]
+      }
+    ]);
+
+    try {
+      switch (answers.action) {
+        case 'Change Wallet':
+          this.keypair = undefined;
+          await this.setupWallet();
+          return;
+        
+        case 'Show Distribution Status':
+          const { DistributionService } = await import('./services/distribution');
+          const distributionService = new DistributionService();
+          const status = await distributionService.getDistributionStatus();
+          
+          Logger.header('DISTRIBUTION STATUS');
+          if (status.mainWallet) {
+            Logger.info(`Main Wallet: ${status.mainWallet.publicKey}`);
+            Logger.balance('Main Balance', status.mainWallet.balance, 'SOL');
+          }
+          Logger.info(`Distributed Wallets: ${status.distributedWallets.length}`);
+          Logger.balance('Total in Distributed Wallets', status.totalDistributed, 'SOL');
+          break;
+        
+        case 'Quick Distribute':
+          Logger.info('Use "npm run distribute" for full distribution options');
+          Logger.info('Quick distribution: 0.01 SOL to 5 wallets');
+          break;
+        
+        case 'Quick Collect':
+          Logger.info('Use "npm run collect" for full collection options');
+          break;
+        
+        case 'Back to Main Menu':
+          return;
+      }
+    } catch (error) {
+      Logger.error(`Wallet management failed: ${error}`);
     }
   }
 }
