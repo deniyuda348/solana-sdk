@@ -107,7 +107,7 @@ PRIORITY_FEE=1000
 1. **Setup Main Wallet:**
    ```bash
    npm run dev
-   # Choose "Generate new wallet" → "Save as main wallet"
+   # Choose "Generate new wallet" → "Save as main wallet (recommended)"
    ```
 
 2. **Fund Main Wallet:**
@@ -117,7 +117,7 @@ PRIORITY_FEE=1000
 3. **Distribute SOL:**
    ```bash
    npm run distribute
-   # Follow prompts to distribute SOL to multiple wallets
+   # Follow prompts to distribute 0.01 SOL to 5 wallets
    ```
 
 4. **Check Status:**
