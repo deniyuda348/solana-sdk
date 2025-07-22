@@ -7,7 +7,7 @@ import {
 } from '@solana/web3.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as crypto from 'crypto';
+import bs58 from 'bs58';
 import { WalletInfo } from '../types';
 import { config } from '../config';
 import { Logger } from './logger';
@@ -35,37 +35,43 @@ export class WalletManager {
   }
 
   /**
-   * Encode private key for secure storage
+   * Get base58 private key from keypair
    */
-  private encodePrivateKey(secretKey: Uint8Array): string {
-    const key = crypto.randomBytes(32);
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-    let encrypted = cipher.update(JSON.stringify(Array.from(secretKey)), 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return `${key.toString('hex')}:${iv.toString('hex')}:${encrypted}`;
+  getPrivateKeyBase58(keypair: Keypair): string {
+    return this.encodePrivateKey(keypair.secretKey);
   }
 
   /**
-   * Decode private key from storage
+   * Convert private key to base58 string for storage
    */
-  private decodePrivateKey(encodedKey: string): Uint8Array {
+  private encodePrivateKey(secretKey: Uint8Array): string {
+    return bs58.encode(secretKey);
+  }
+
+  /**
+   * Decode private key from base58 string
+   */
+  private decodePrivateKey(base58Key: string): Uint8Array {
     try {
-      const [keyHex, ivHex, encrypted] = encodedKey.split(':');
-      const key = Buffer.from(keyHex, 'hex');
-      const iv = Buffer.from(ivHex, 'hex');
-      const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      const secretKeyArray = JSON.parse(decrypted);
-      return new Uint8Array(secretKeyArray);
+      // Try to decode as base58 first
+      return bs58.decode(base58Key);
     } catch (error) {
-      // Fallback for plain text stored keys (backward compatibility)
+      // Fallback for legacy formats (backward compatibility)
       try {
-        const secretKeyArray = JSON.parse(encodedKey);
+        // Try as JSON array format
+        const secretKeyArray = JSON.parse(base58Key);
         return new Uint8Array(secretKeyArray);
       } catch {
-        throw new Error('Invalid encoded private key format');
+        // Try as encrypted format (legacy)
+        try {
+          const [keyHex, ivHex, encrypted] = base58Key.split(':');
+          if (keyHex && ivHex && encrypted) {
+            throw new Error('Legacy encrypted format is no longer supported. Please regenerate your wallet.');
+          }
+        } catch {
+          // Not encrypted format
+        }
+        throw new Error('Invalid private key format. Expected base58 string.');
       }
     }
   }
@@ -76,11 +82,11 @@ export class WalletManager {
   loadWallet(privateKey: number[] | string): Keypair {
     try {
       if (typeof privateKey === 'string') {
-        // If it's a string, try to decode it first
+        // If it's a string, decode it as base58 or fallback to legacy formats
         const secretKey = this.decodePrivateKey(privateKey);
         return Keypair.fromSecretKey(secretKey);
       } else {
-        // If it's an array of numbers
+        // If it's an array of numbers (legacy format)
         return Keypair.fromSecretKey(new Uint8Array(privateKey));
       }
     } catch (error) {
@@ -90,7 +96,7 @@ export class WalletManager {
   }
 
   /**
-   * Load wallet from JSON file
+   * Load wallet from file (supports base58 and legacy formats)
    */
   loadWalletFromFile(filePath: string): Keypair {
     try {
@@ -98,7 +104,7 @@ export class WalletManager {
         throw new Error(`Wallet file not found: ${filePath}`);
       }
 
-      const walletData = fs.readFileSync(filePath, 'utf8');
+      const walletData = fs.readFileSync(filePath, 'utf8').trim();
       return this.loadWallet(walletData);
     } catch (error) {
       Logger.error(`Failed to load wallet from file: ${error}`);
@@ -107,12 +113,12 @@ export class WalletManager {
   }
 
   /**
-   * Save wallet to JSON file with encoded private key
+   * Save wallet to file with base58 private key
    */
   saveWalletToFile(keypair: Keypair, filePath: string): void {
     try {
-      const encodedPrivateKey = this.encodePrivateKey(keypair.secretKey);
-      fs.writeFileSync(filePath, encodedPrivateKey, 'utf8');
+      const base58PrivateKey = this.encodePrivateKey(keypair.secretKey);
+      fs.writeFileSync(filePath, base58PrivateKey, 'utf8');
       Logger.success(`Wallet saved to ${filePath}`);
     } catch (error) {
       Logger.error(`Failed to save wallet: ${error}`);
