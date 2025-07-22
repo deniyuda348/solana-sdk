@@ -91,6 +91,8 @@ class SolanaWalletManager {
     
     Logger.success('New wallet generated!');
     Logger.wallet(keypair.publicKey.toBase58());
+    console.log('Private key (base58 - for Phantom wallet):');
+    console.log(this.walletManager.getPrivateKeyBase58(keypair));
 
     const saveAnswer = await inquirer.prompt([
       {
@@ -132,23 +134,35 @@ class SolanaWalletManager {
       {
         type: 'input',
         name: 'privateKey',
-        message: 'Enter your private key (as JSON array):',
+        message: 'Enter your private key (base58 string or JSON array):',
         validate: (input: string) => {
           try {
+            // Try base58 first
+            if (input.length > 80 && input.length < 90 && !input.includes('[')) {
+              return true;
+            }
+            // Try JSON array format
             const parsed = JSON.parse(input);
             if (Array.isArray(parsed) && parsed.length === 64) {
               return true;
             }
-            return 'Please enter a valid private key array with 64 numbers';
+            return 'Please enter a valid base58 private key or JSON array with 64 numbers';
           } catch {
-            return 'Please enter a valid JSON array';
+            return 'Please enter a valid base58 private key or JSON array';
           }
         }
       }
     ]);
 
     try {
-      const keypair = this.walletManager.loadWallet(JSON.parse(answer.privateKey));
+      let keypair;
+      // Check if it's a JSON array or base58 string
+      if (answer.privateKey.trim().startsWith('[')) {
+        keypair = this.walletManager.loadWallet(JSON.parse(answer.privateKey));
+      } else {
+        keypair = this.walletManager.loadWallet(answer.privateKey.trim());
+      }
+      
       Logger.success('Wallet loaded successfully!');
       await this.walletManager.displayWalletInfo(keypair);
       this.initializeServices(keypair);
@@ -493,8 +507,8 @@ function createAndSaveWallet(outputFile?: string) {
   const keypair = wm.generateWallet();
   Logger.success('New wallet generated!');
   Logger.wallet(keypair.publicKey.toBase58());
-  console.log('Private key (JSON array):');
-  console.log(JSON.stringify(Array.from(keypair.secretKey)));
+  console.log('Private key (base58 - for Phantom wallet):');
+  console.log(wm.getPrivateKeyBase58(keypair));
 
   if (outputFile) {
     wm.saveWalletToFile(keypair, outputFile);
